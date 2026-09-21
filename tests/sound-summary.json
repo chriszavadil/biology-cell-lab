@@ -1,0 +1,37 @@
+{
+  "version": "1.0.2",
+  "unit_tests": 38,
+  "browser_checks": [
+    "chromium default sounds on, no autoplay or audio context on page load",
+    "chromium correct/wrong sounds fire for choice without changing grading",
+    "chromium correct/wrong sounds fire for typed without changing grading",
+    "chromium correct/wrong sounds fire for multi without changing grading",
+    "chromium correct/wrong sounds fire for order without changing grading",
+    "chromium real running AudioContext produces nonzero output signal",
+    "chromium reload is silent",
+    "chromium muted answers still grade but emit no tones",
+    "chromium mute preference survives reload",
+    "chromium volume slider and wrong-sound preview work without scoring",
+    "chromium test mode never leaks answers through sound; end chime and exact 5/10",
+    "chromium exam results never replay completion chime on reload",
+    "chromium cell challenge has distinct feedback and ignores double-click on completed target",
+    "chromium sounds resume after an audio interruption/suspension",
+    "chromium sound controls fit small phone, phone, tablet, and desktop",
+    "chromium sound settings pass automated accessibility scan",
+    "chromium no unhandled browser errors",
+    "chromium all three cues render real non-silent waveforms, below clipping, ending in silence",
+    "chromium correct and incorrect waveforms are different",
+    "webkit default sounds on, no autoplay or audio context on page load",
+    "webkit Windows harness has no Web Audio API; safe unavailable handling, grading, mute persistence and layout pass"
+  ],
+  "offline": {
+    "version": "1.0.2",
+    "normal_reload_update_detection": true,
+    "draft_preserved": true,
+    "audio_module_cached": true,
+    "origin_stopped": true,
+    "real_sound_offline": true,
+    "mute_persisted_offline": true
+  },
+  "physical_iphone_audio_tested": false
+}

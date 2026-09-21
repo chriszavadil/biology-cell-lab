@@ -1,12 +1,14 @@
 import { DATA } from './data.js';
 import { STORAGE_KEY, SESSION_KEY, emptyProgress, cleanProgress, escapeHTML as e, shuffle, grade, stats, recordAnswer, makeDeck, localDate } from './core.js';
 import { icon, cellSVG, waterSVG } from './visuals.js';
+import { AUDIO_KEY, createFeedbackAudio } from './audio.js';
 
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const byId = Object.fromEntries(DATA.questions.map(q=>[q.id,q]));
 const topics = Object.fromEntries(DATA.topics.map(t=>[t.id,t]));
 const app = $('#app');
+const feedbackAudio=createFeedbackAudio({onError:message=>toast(message)});
 let storageWarning='', roundWarning='', savedSnapshot=null, progress=loadProgress(), round=loadRound();
 let cardSession=null, explorer={tab:'cells',kind:'animal',selected:'nucleus',labels:true,challenge:false,target:'',feedback:null,found:0};
 let water='hypo', pathway=0, revealGuide=new Set(), toastTimer, offlineReady=false;
@@ -81,9 +83,30 @@ function button(text,action,cls='primary',attrs=''){return `<button class="butto
 function topicOptions(selected='all'){return `<option value="all" ${selected==='all'?'selected':''}>All Unit 2 topics + basics</option>`+DATA.topics.map(t=>`<option value="${t.id}" ${selected===t.id?'selected':''}>${e(t.name)}</option>`).join('');}
 function pageHeading(kicker,title,subtitle,extra=''){return `<div class="page-heading"><div><div class="eyebrow">${kicker}</div><h1 id="page-title" tabindex="-1">${title}</h1>${subtitle?`<p>${subtitle}</p>`:''}</div>${extra}</div>`;}
 function reference(ids){return `<details class="references"><summary>Reference reading</summary>${[...new Set(ids)].map(id=>{const s=DATA.sources[id];return s.url?`<a href="${e(s.url)}" target="_blank" rel="noopener noreferrer">${e(s.title)} ↗</a>`:`<p>${e(s.title)}. ${e(s.note)}</p>`;}).join('')}</details>`;}
+function soundToggle(where='header'){
+ const s=feedbackAudio.getSettings(),on=s.enabled&&s.volume>0;
+ return `<button id="${where}-sound" type="button" class="${where==='header'?'sound-toggle':'button secondary'}" data-action="toggle-sound" role="switch" aria-label="Answer sounds" aria-checked="${on}" title="${on?'Mute answer sounds':'Turn on answer sounds'}">${icon(on?'volume':'volume-off')}<span>${on?'Sound on':'Sound off'}</span></button>`;
+}
+function refreshSoundControls(){
+ const s=feedbackAudio.getSettings(),on=s.enabled&&s.volume>0;
+ $$('[data-action="toggle-sound"]').forEach(b=>{b.setAttribute('aria-checked',String(on));b.title=on?'Mute answer sounds':'Turn on answer sounds';b.innerHTML=icon(on?'volume':'volume-off')+'<span>'+ (on?'Sound on':'Sound off')+'</span>';});
+ $$('[data-action="preview-sound"]').forEach(b=>b.disabled=!on);
+ if($('#sound-volume'))$('#sound-volume').value=Math.round(s.volume*100);
+ if($('#sound-value'))$('#sound-value').textContent=Math.round(s.volume*100)+'%';
+}
+function setSoundPrefs(next){
+ const saved=feedbackAudio.setSettings(next);refreshSoundControls();
+ if(!saved)toast('Sound setting changed for this tab. This browser is not saving preferences.');
+ return saved;
+}
+function soundSettings(){
+ const s=feedbackAudio.getSettings(),on=s.enabled&&s.volume>0;
+ return `<section class="panel sound-panel"><span class="mini-icon mint">${icon('volume')}</span><h2>A little sound, a little encouragement</h2><p>A bright chime for a correct answer, and a gentle two-note sound for a missed one. You can mute them any time with the speaker button at the top.</p><div class="button-row">${soundToggle('settings')}</div><label class="sound-volume-label" for="sound-volume">Answer sound volume <output id="sound-value" for="sound-volume">${Math.round(s.volume*100)}%</output></label><input id="sound-volume" type="range" min="0" max="100" step="10" value="${Math.round(s.volume*100)}"><div class="button-row sound-previews">${button('Try correct sound','preview-sound','secondary',`data-value="correct" ${on?'':'disabled'}`)}${button('Try wrong sound','preview-sound','secondary',`data-value="incorrect" ${on?'':'disabled'}`)}</div><p class="small-text muted">Practice and Find the part use answer sounds. Test yourself saves silently and plays a completion chime only at the end. Sounds work offline and do not change your scores. These controls do not mute the optional Listen buttons.</p><p class="small-text muted">Not hearing anything? Try a preview and check your device volume and silent settings. Sound preferences stay in this browser.</p></section>`;
+}
+
 function header(active){
  const s=stats(progress,DATA), nav=[['home','home','Home'],['guide','book','Study guide'],['quiz','spark','Practice'],['cards','cards','Cards'],['explore','orbit','Explore']];
- return `<header class="topbar"><div class="topbar-inner"><a class="brand" href="#home" aria-label="Cell Lab home"><span class="brand-mark">${icon('cell')}</span><span>cell<span class="brand-light">lab</span><small>BIOLOGY, MADE CLEAR</small></span></a><nav class="desktop-nav" aria-label="Main navigation">${nav.map(([id,ic,label])=>`<a href="#${id}" ${active===id?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="header-right"><a class="streak-link" href="#progress" aria-label="View progress: ${s.streak} day study streak">${icon('spark')}<span>${s.streak?`${s.streak} day streak`:'Your study space'}</span></a><a class="help-link" href="#help" aria-label="App help and sources">${icon('help')}</a></div></div></header>
+ return `<header class="topbar"><div class="topbar-inner"><a class="brand" href="#home" aria-label="Cell Lab home"><span class="brand-mark">${icon('cell')}</span><span>cell<span class="brand-light">lab</span><small>BIOLOGY, MADE CLEAR</small></span></a><nav class="desktop-nav" aria-label="Main navigation">${nav.map(([id,ic,label])=>`<a href="#${id}" ${active===id?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="header-right"><a class="streak-link" href="#progress" aria-label="View progress: ${s.streak} day study streak">${icon('spark')}<span>${s.streak?`${s.streak} day streak`:'Your study space'}</span></a>${soundToggle()}<a class="help-link" href="#help" aria-label="App help and sources">${icon('help')}</a></div></div></header>
  <nav class="mobile-nav" aria-label="Mobile navigation">${[...nav.slice(0,1),['guide','book','Guide'],...nav.slice(2,4),['explore','orbit','Explore']].map(([id,ic,label])=>`<a href="#${id}" ${active===id?'aria-current="page"':''}>${icon(ic)}<span>${label}</span></a>`).join('')}</nav>`;
 }
 function footer(){return `<footer class="footer"><span>${icon('cell')} Little by little, it clicks.</span><div><a href="#progress">Your progress</a><a href="#help">Sources & app info</a><span class="offline-status">${offlineReady?'Ready offline · v'+DATA.version:'Cell Lab v'+DATA.version}</span></div></footer>`;}
@@ -181,13 +204,14 @@ function checkAnswer(){
  if(entry.answered||$('#check-answer')?.disabled)return;
  entry.correct=grade(q,entry.response);entry.answered=true;
  recordAnswer(progress,q.id,entry.correct);save();saveRound();
+ if(round.mode!=='exam')void feedbackAudio.play(entry.correct?'correct':'incorrect');
  render();$('#answer-feedback')?.focus({preventScroll:true});
  $('#answer-feedback')?.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function nextQuestion(){
- if(!round||!round.entries[round.index].answered)return;
+ if(!round||round.done||!round.entries[round.index].answered)return;
  if(round.index<round.entries.length-1){round.index++;saveRound();render();window.scrollTo({top:0,behavior:'instant'});$('#page-title')?.focus({preventScroll:true});}
- else {round.done=true;if(!round.summarySaved){progress.rounds.push({at:new Date().toISOString(),total:round.entries.length,correct:round.entries.filter(x=>x.correct).length,mode:round.mode});progress.rounds=progress.rounds.slice(-50);round.summarySaved=true;save();}saveRound();go('#quiz/results');}
+ else {round.done=true;if(!round.summarySaved){progress.rounds.push({at:new Date().toISOString(),total:round.entries.length,correct:round.entries.filter(x=>x.correct).length,mode:round.mode});progress.rounds=progress.rounds.slice(-50);round.summarySaved=true;save();}saveRound();if(round.mode==='exam')void feedbackAudio.play('complete');go('#quiz/results');}
 }
 function resultsPage(){
  const correct=round.entries.filter(x=>x.correct).length,total=round.entries.length,pct=Math.round(correct/total*100),wrong=round.entries.filter(x=>!x.correct);
@@ -255,7 +279,7 @@ function progressPage(){
  ${progress.rounds.length?`<section class="panel"><h2>Recent rounds</h2><div class="round-list">${progress.rounds.slice(-8).reverse().map(r=>`<div><span>${Number.isNaN(new Date(r.at).getTime())?'Practice round':new Date(r.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}<small>${r.mode==='exam'?'Test yourself':'Learn as you go'}</small></span><strong>${r.correct} / ${r.total}</strong></div>`).join('')}</div></section>`:''}<div class="notice">${icon('shield')}<span>Progress lives in this browser, on this device. <a href="#help">Export a backup</a> to move it to another device. Flashcard self-ratings do not affect quiz accuracy.</span></div>`;
 }
 function helpPage(){
- return pageHeading('A FEW USEFUL DETAILS','Your lab, your pace','How to use Cell Lab, keep your progress, and check the sources.')+`<div class="help-grid"><section class="panel"><span class="mini-icon mint">${icon('book')}</span><h2>Start here</h2><p>Begin with the seven study-guide prompts, then practice a topic or shuffle a quiz. Use flashcards for recall and the explorer to connect structures with their functions.</p><p><strong>Written answers:</strong> compare your explanation with the model and checklist. The app does not pretend to automatically grade open-ended biology explanations.</p><p><strong>Typed quiz answers:</strong> enter the requested term. Capitalization, punctuation, spacing, and explicitly accepted synonyms are normalized. Standard dotted abbreviations such as A.T.P. and R.E.R. are accepted too. Incorrect terms are not accepted merely because they contain the right word.</p><p><strong>Review queue:</strong> a missed question stays there until you correctly answer it in a later quiz.</p><p><strong>Read aloud:</strong> uses your browser’s device voice. Availability and offline speech support vary; some voices may use an online speech service.</p></section>
+ return pageHeading('A FEW USEFUL DETAILS','Your lab, your pace','How to use Cell Lab, keep your progress, and check the sources.')+`<div class="help-grid">${soundSettings()}<section class="panel"><span class="mini-icon mint">${icon('book')}</span><h2>Start here</h2><p>Begin with the seven study-guide prompts, then practice a topic or shuffle a quiz. Use flashcards for recall and the explorer to connect structures with their functions.</p><p><strong>Written answers:</strong> compare your explanation with the model and checklist. The app does not pretend to automatically grade open-ended biology explanations.</p><p><strong>Typed quiz answers:</strong> enter the requested term. Capitalization, punctuation, spacing, and explicitly accepted synonyms are normalized. Standard dotted abbreviations such as A.T.P. and R.E.R. are accepted too. Incorrect terms are not accepted merely because they contain the right word.</p><p><strong>Review queue:</strong> a missed question stays there until you correctly answer it in a later quiz.</p><p><strong>Read aloud:</strong> uses your browser’s device voice. Availability and offline speech support vary; some voices may use an online speech service.</p></section>
  <section class="panel"><span class="mini-icon lavender">${icon('download')}</span><h2>Keep it on your phone</h2><p>On iPhone, open this site in Safari, tap the Share button, then choose <strong>Add to Home Screen</strong>. On supported Android browsers, use <strong>Install app</strong> or <strong>Add to Home screen</strong> in the browser menu.</p><p>The app caches its study content after a successful online visit. Wait for <strong>Ready offline</strong> in the footer before relying on it offline. External reference pages still need internet.</p><p><strong>Updates:</strong> when a new version is ready, an update banner appears. Finish your current answer, then update. Saved progress is kept.</p><div class="notice soft-mint">No account, subscription, or AI API key needed. No computer at home needs to stay on.</div></section>
  <section class="panel"><span class="mini-icon blue">${icon('shield')}</span><h2>Your progress belongs here</h2><p>Your answers, drafts, flashcard ratings, and quiz results are stored locally in this browser. The app has no analytics or server that receives study answers. GitHub serves the public app files.</p><p>Progress does not automatically sync between phones, browsers, or home-screen installs. Clearing website data can erase it, so export a backup to keep it safe.</p><div class="button-row">${button(icon('download')+' Export progress','export-progress','primary')}<label class="button secondary import-button">Import backup<input id="import-progress" type="file" accept="application/json,.json" class="sr-only"></label></div><p class="small-text muted">An import replaces this browser’s progress after confirmation. Treat exported files as personal: they include written study drafts.</p><details class="reset-zone"><summary>Reset this app’s progress</summary><p>This only deletes Cell Lab progress in this browser, not your Spanish app or other websites.</p>${button('Reset Cell Lab progress','reset-progress','danger')}</details></section>
  <section class="panel"><span class="mini-icon rose">${icon('flask')}</span><h2>About the content</h2><p>Cell Lab includes <strong>all seven prompts</strong> from the supplied Honors Biology Unit 2 worksheet, plus <strong>${DATA.questions.length} original practice questions</strong> and <strong>${DATA.flashcards.length} recall cards</strong>. The extra chemistry topic revisits basic biology building blocks.</p><p>The six characteristics use the class reading’s grouping: respond to the environment; grow and develop; produce offspring; maintain homeostasis; have complex chemistry; consist of cells.</p><p>Model answers are study aids, not a teacher-approved answer key. A teacher may accept other valid examples or use different phrasing. Cell diagrams are original simplified schematics, not to scale.</p><p>The worksheet photo, student name, school name, and personal information are not included in the public repository.</p><p class="muted small-text">Cell Lab v${DATA.version} · Content reviewed September 21, 2026</p></section></div>
@@ -307,6 +331,8 @@ document.addEventListener('click',event=>{
   case 'path-next':pathway=(pathway+1)%journey.length;render();break;
   case 'speak-path':speak(journey[pathway].place+'. '+journey[pathway].body);break;
   case 'water-state':water=el.dataset.value;render();break;
+  case 'toggle-sound':{const s=feedbackAudio.getSettings(),on=!(s.enabled&&s.volume>0);const saved=setSoundPrefs({enabled:on,volume:s.volume||0.6});if(on)void feedbackAudio.play('correct');if(saved)toast(on?'Answer sounds on.':'Answer sounds muted.');break;}
+  case 'preview-sound':void feedbackAudio.play(el.dataset.value);break;
   case 'export-progress':exportProgress();break;
   case 'reset-progress':if(confirm('Delete all Cell Lab progress, written drafts, and the current round in this browser? This cannot be undone without an exported backup.')){progress=emptyProgress();round=null;cardSession=null;revealGuide.clear();save();saveRound();render();toast('Cell Lab progress reset.');}break;
  }
@@ -314,7 +340,7 @@ document.addEventListener('click',event=>{
 function getGuide(id){return progress.guides[id]??=( {draft:'',checks:[],confidence:''} );}
 function selectOrganelle(id){
  if(!DATA.organelles.some(o=>o.id===id&&o.cells.includes(explorer.kind)))return;
- if(explorer.challenge){if(explorer.feedback?.correct)return;const correct=id===explorer.target;explorer.feedback={correct};if(correct)explorer.found++;}
+ if(explorer.challenge){if(explorer.feedback?.correct)return;const correct=id===explorer.target;explorer.feedback={correct};void feedbackAudio.play(correct?'correct':'incorrect');if(correct)explorer.found++;}
  else explorer.selected=id;
  const y=window.scrollY;render();window.scrollTo(0,y);
 }
@@ -326,6 +352,7 @@ document.addEventListener('submit',event=>{if(event.target.id==='answer-form'){e
 document.addEventListener('input',event=>{
  syncProgress();
  const el=event.target;
+ if(el.id==='sound-volume'){const volume=Number(el.value)/100;setSoundPrefs({volume,enabled:volume>0});}
  if(el.id==='guide-draft'){const s=getGuide(Number(el.dataset.guide));s.draft=el.value;save();$('#draft-status').textContent=storageWarning?'Draft kept for this tab only':'Draft saved on this device';}
  if(el.id==='typed-answer'&&round){round.entries[round.index].response=el.value;saveRound();updateCheckButton();}
 });
@@ -349,7 +376,9 @@ async function importProgress(file){
 }
 window.addEventListener('storage',event=>{if(event.key!==STORAGE_KEY&&event.key!==null)return;if(syncProgress()&&!document.activeElement?.matches('input,textarea,select')){const y=scrollY;render();scrollTo(0,y);}});
 window.addEventListener('hashchange',()=>{render();window.scrollTo({top:0,behavior:'instant'});$('#page-title')?.focus({preventScroll:true});});
-window.addEventListener('pagehide',()=>{stopSpeech();saveRound();});
+window.addEventListener('pagehide',()=>{feedbackAudio.stop();stopSpeech();saveRound();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)feedbackAudio.stop();});
+window.addEventListener('storage',event=>{if(event.key===AUDIO_KEY||event.key===null){feedbackAudio.sync();refreshSoundControls();}});
 render();
 if('serviceWorker'in navigator){
  navigator.serviceWorker.register('./sw.js').then(reg=>{

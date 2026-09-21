@@ -16,6 +16,7 @@ const paths={
  check:'m5 12 4 4L19 6',
  close:'m6 6 12 12 M18 6 6 18',
  play:'m8 4 13 8-13 8Z',
+ 'volume-off':'M11 4 6 8H2v8h4l5 4Z M16 9l6 6 M22 9l-6 6',
  volume:'M11 4 6 8H2v8h4l5 4Z M15 8a6 6 0 0 1 0 8 M18 4a12 12 0 0 1 0 16',
  chart:'M4 3v18h17 M8 16v-4 M13 16V8 M18 16V4',
  refresh:'M20 7a9 9 0 1 0 1 8 M20 2v6h-6',

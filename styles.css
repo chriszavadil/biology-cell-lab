@@ -33,3 +33,14 @@
 .result-score strong span{color:#63766e;}
 
 .result-detail p,.answer-feedback p{overflow-wrap:anywhere;}
+
+/* Optional answer sounds; accessible switch and finger-sized settings. */
+.sound-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:44px;min-height:44px;padding:8px 10px;border:1px solid #d8e5df;border-radius:12px;background:#edf5f0;color:#235f4e;cursor:pointer;white-space:nowrap;font:inherit;font-size:11px;}
+.sound-toggle[aria-checked="false"]{background:#f1f2f6;border-color:#dce0e8;color:#586173;}
+.sound-toggle .icon{width:20px;height:20px;flex:none;}
+.sound-volume-label{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:22px 0 6px;font-size:14px;font-weight:600;}
+#sound-volume{display:block;width:100%;min-height:44px;accent-color:#256451;cursor:pointer;}
+.sound-previews{margin:12px 0 20px;flex-wrap:wrap;}
+.sound-previews .button{min-height:44px;}
+@media(max-width:1150px){.sound-toggle span{display:none;}.header-right{gap:8px;}}
+@media(max-width:760px){.header-right .streak-link span{display:none;}.topbar-inner{gap:12px;}.sound-toggle{padding:8px;}}

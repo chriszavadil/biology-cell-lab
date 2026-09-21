@@ -1,1 +1,1 @@
-{"name": "biology-cell-lab", "version": "1.0.1", "private": true, "type": "module", "scripts": {"test": "node --test tests/core.test.mjs"}}
+{"name": "biology-cell-lab", "version": "1.0.2", "private": true, "type": "module", "scripts": {"test": "node --test tests/core.test.mjs tests/audio.test.mjs"}}

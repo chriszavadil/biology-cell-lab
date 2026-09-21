@@ -1,6 +1,6 @@
 /* Original study content; see Sources in the app. */
 export const DATA = {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "topics": [
     {
       "id": "life",
