@@ -48,7 +48,7 @@ test('failed resume resolves safely; hidden tabs do not start sound',async()=>{
  h.env.document.hidden=true;assert.equal(await a.play('correct'),false);
 });
 test('all cues are distinct, brief, bounded in frequency, and use scheduled start/stop',()=>{
- const h=harness();const c=new h.env.AudioContext();for(const kind of Object.keys(CUES)){const nodes=scheduleCue(c,c.destination,kind);assert.equal(nodes.length,CUES[kind].length);for(const n of nodes){assert.equal(n.oscillator.starts.length,1);assert(n.oscillator.stops[0]<0.6);}}
+ const h=harness();const c=new h.env.AudioContext();for(const kind of Object.keys(CUES)){const nodes=scheduleCue(c,c.destination,kind);assert.equal(nodes.length,CUES[kind].length);for(const n of nodes){assert.equal(n.oscillator.starts.length,1);assert(n.oscillator.stops[0]<0.9);}}
  assert.notDeepEqual(CUES.correct,CUES.incorrect);assert.deepEqual(scheduleCue(c,c.destination,'invalid'),[]);
- for(const notes of Object.values(CUES))for(const [hz,offset,duration] of notes){assert(hz>200&&hz<1500);assert(offset+duration<=0.6);}
+ for(const notes of Object.values(CUES))for(const [hz,offset,duration] of notes){assert(hz>200&&hz<1500);assert(offset+duration<=0.85);}
 });

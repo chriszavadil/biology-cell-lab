@@ -1,6 +1,8 @@
 # Cell Lab
 
-Current release: **1.0.2**. Answer sounds, mute, and volume controls: see [sound release](SOUND_RELEASE.md). See [handoff audit](HANDOFF_AUDIT.md) for verified fixes, tests, and limitations.
+Louder answer cues: see [1.0.3 sound update](LOUDNESS_RELEASE.md).
+
+Current release: **1.0.3**. Answer sounds, mute, and volume controls: see [sound release](SOUND_RELEASE.md). See [handoff audit](HANDOFF_AUDIT.md) for verified fixes, tests, and limitations.
 
 A static, mobile-first Honors Biology Unit 2 study app.
 

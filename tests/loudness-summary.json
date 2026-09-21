@@ -1,0 +1,246 @@
+{
+  "version": "1.0.3",
+  "unit_tests": 38,
+  "browser_checks": [
+    "chromium default sounds on, no autoplay or audio context on page load",
+    "chromium correct/wrong sounds fire for choice without changing grading",
+    "chromium correct/wrong sounds fire for typed without changing grading",
+    "chromium correct/wrong sounds fire for multi without changing grading",
+    "chromium correct/wrong sounds fire for order without changing grading",
+    "chromium real running AudioContext produces nonzero output signal",
+    "chromium reload is silent",
+    "chromium muted answers still grade but emit no tones",
+    "chromium mute preference survives reload",
+    "chromium volume slider and wrong-sound preview work without scoring",
+    "chromium test mode never leaks answers through sound; end chime and exact 5/10",
+    "chromium exam results never replay completion chime on reload",
+    "chromium cell challenge has distinct feedback and ignores double-click on completed target",
+    "chromium sounds resume after an audio interruption/suspension",
+    "chromium sound controls fit small phone, phone, tablet, and desktop",
+    "chromium sound settings pass automated accessibility scan",
+    "chromium no unhandled browser errors",
+    "chromium all three cues render real non-silent waveforms, below clipping, ending in silence",
+    "chromium correct and incorrect waveforms are different",
+    "webkit default sounds on, no autoplay or audio context on page load",
+    "webkit Windows harness has no Web Audio API; safe unavailable handling, grading, mute persistence and layout pass"
+  ],
+  "signal_comparison": {
+    "version": "1.0.3",
+    "method": "48kHz real OfflineAudioContext, one-second windows, identical gain settings; digital signal level, not ear/device SPL",
+    "results": [
+      {
+        "volume": 0,
+        "kind": "correct",
+        "before": {
+          "peak": 0,
+          "rms": 0,
+          "lastAudibleSampleSeconds": 0,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0,
+          "rms": 0,
+          "lastAudibleSampleSeconds": 0,
+          "tail": 0
+        },
+        "rmsIncreaseDb": null
+      },
+      {
+        "volume": 0,
+        "kind": "incorrect",
+        "before": {
+          "peak": 0,
+          "rms": 0,
+          "lastAudibleSampleSeconds": 0,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0,
+          "rms": 0,
+          "lastAudibleSampleSeconds": 0,
+          "tail": 0
+        },
+        "rmsIncreaseDb": null
+      },
+      {
+        "volume": 0,
+        "kind": "complete",
+        "before": {
+          "peak": 0,
+          "rms": 0,
+          "lastAudibleSampleSeconds": 0,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0,
+          "rms": 0,
+          "lastAudibleSampleSeconds": 0,
+          "tail": 0
+        },
+        "rmsIncreaseDb": null
+      },
+      {
+        "volume": 0.3,
+        "kind": "correct",
+        "before": {
+          "peak": 0.054384876042604446,
+          "rms": 0.008814909817277162,
+          "lastAudibleSampleSeconds": 0.36825,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.20050418376922607,
+          "rms": 0.0752463693916641,
+          "lastAudibleSampleSeconds": 0.8311875,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 18.625353534193167
+      },
+      {
+        "volume": 0.3,
+        "kind": "incorrect",
+        "before": {
+          "peak": 0.04187021777033806,
+          "rms": 0.005584598614135124,
+          "lastAudibleSampleSeconds": 0.3033958333333333,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.1915920227766037,
+          "rms": 0.06930031695614117,
+          "lastAudibleSampleSeconds": 0.7211875,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 21.874865134354067
+      },
+      {
+        "volume": 0.3,
+        "kind": "complete",
+        "before": {
+          "peak": 0.05416228249669075,
+          "rms": 0.0076770542420151,
+          "lastAudibleSampleSeconds": 0.30975,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.19145090878009796,
+          "rms": 0.0692997484327322,
+          "lastAudibleSampleSeconds": 0.7210208333333333,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 19.110740979095713
+      },
+      {
+        "volume": 0.6,
+        "kind": "correct",
+        "before": {
+          "peak": 0.10876975208520889,
+          "rms": 0.017629819634554324,
+          "lastAudibleSampleSeconds": 0.39177083333333335,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.40100836753845215,
+          "rms": 0.1504927387833282,
+          "lastAudibleSampleSeconds": 0.8315833333333333,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 18.625353534193167
+      },
+      {
+        "volume": 0.6,
+        "kind": "incorrect",
+        "before": {
+          "peak": 0.08374043554067612,
+          "rms": 0.011169197228270249,
+          "lastAudibleSampleSeconds": 0.3255416666666667,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.3831840455532074,
+          "rms": 0.13860063391228233,
+          "lastAudibleSampleSeconds": 0.7213125,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 21.874865134354067
+      },
+      {
+        "volume": 0.6,
+        "kind": "complete",
+        "before": {
+          "peak": 0.1083245649933815,
+          "rms": 0.0153541084840302,
+          "lastAudibleSampleSeconds": 0.3365416666666667,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.3829018175601959,
+          "rms": 0.1385994968654644,
+          "lastAudibleSampleSeconds": 0.7215625,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 19.110740979095713
+      },
+      {
+        "volume": 1,
+        "kind": "correct",
+        "before": {
+          "peak": 0.1812829077243805,
+          "rms": 0.02938303156828991,
+          "lastAudibleSampleSeconds": 0.40920833333333334,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.6683472394943237,
+          "rms": 0.2508212211769395,
+          "lastAudibleSampleSeconds": 0.831625,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 18.625353525155855
+      },
+      {
+        "volume": 1,
+        "kind": "incorrect",
+        "before": {
+          "peak": 0.13956739008426666,
+          "rms": 0.018615327976594893,
+          "lastAudibleSampleSeconds": 0.34252083333333333,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.6386400461196899,
+          "rms": 0.23100104717297212,
+          "lastAudibleSampleSeconds": 0.7213958333333333,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 21.874865126849432
+      },
+      {
+        "volume": 1,
+        "kind": "complete",
+        "before": {
+          "peak": 0.18054093420505524,
+          "rms": 0.02559017977020188,
+          "lastAudibleSampleSeconds": 0.3569375,
+          "tail": 0
+        },
+        "after": {
+          "peak": 0.6381696462631226,
+          "rms": 0.23099915201349677,
+          "lastAudibleSampleSeconds": 0.721625,
+          "tail": 0
+        },
+        "rmsIncreaseDb": 19.110740976371126
+      }
+    ]
+  },
+  "update_offline": {
+    "version": "1.0.3",
+    "normal_reload_update_detection": true,
+    "draft_preserved": true,
+    "audio_module_cached": true,
+    "origin_stopped": true,
+    "real_sound_offline": true,
+    "mute_persisted_offline": true
+  }
+}

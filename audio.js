@@ -2,9 +2,9 @@
 export const AUDIO_KEY='cell-lab.audio.v1';
 export const DEFAULT_AUDIO=Object.freeze({enabled:true,volume:0.6});
 export const CUES=Object.freeze({
- correct:[[659.25,0,0.20],[880,0.10,0.22],[1318.51,0.21,0.28]],
- incorrect:[[392,0,0.19],[293.66,0.16,0.26]],
- complete:[[523.25,0,0.22],[783.99,0.13,0.32]]
+ correct:[[783.99,0,0.23],[987.77,0.21,0.25],[1318.51,0.44,0.38]],
+ incorrect:[[659.25,0,0.30],[523.25,0.31,0.40]],
+ complete:[[659.25,0,0.30],[880,0.31,0.40]]
 });
 export function cleanAudio(raw){
  return {enabled:typeof raw?.enabled==='boolean'?raw.enabled:true,
@@ -12,12 +12,14 @@ export function cleanAudio(raw){
 }
 export function scheduleCue(ctx,destination,kind){
  if(!Object.hasOwn(CUES,kind))return [];
- const nodes=[],base=ctx.currentTime+0.012,peak=kind==='incorrect'?0.14:0.18;
+ const nodes=[],base=ctx.currentTime+0.012,peak=0.65;
  for(const [frequency,offset,duration] of CUES[kind]){
   const oscillator=ctx.createOscillator(),envelope=ctx.createGain(),start=base+offset,end=start+duration;
-  oscillator.type='sine';oscillator.frequency.setValueAtTime(frequency,start);
+  oscillator.type='triangle';oscillator.frequency.setValueAtTime(frequency,start);
   envelope.gain.setValueAtTime(0,start);envelope.gain.linearRampToValueAtTime(peak,start+0.012);
-  envelope.gain.exponentialRampToValueAtTime(0.0001,end-0.015);envelope.gain.linearRampToValueAtTime(0,end);
+  // A short sustained body is audible, unlike an immediate near-silent exponential decay.
+  envelope.gain.linearRampToValueAtTime(peak*0.8,start+0.055);
+  envelope.gain.setValueAtTime(peak*0.8,end-0.09);envelope.gain.linearRampToValueAtTime(0,end);
   oscillator.connect(envelope);envelope.connect(destination);
   oscillator.start(start);oscillator.stop(end+0.015);
   nodes.push({oscillator,envelope});
