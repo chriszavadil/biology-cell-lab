@@ -1,6 +1,6 @@
 /* Original study content; see Sources in the app. */
 export const DATA = {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "topics": [
     {
       "id": "life",
@@ -2106,7 +2106,7 @@ export const DATA = {
       "id": "q108",
       "topic": "transport",
       "type": "typed",
-      "prompt": "What process takes material into a cell by forming a membrane-bound vesicle?",
+      "prompt": "What GENERAL process takes material into a cell by forming a membrane-bound vesicle?",
       "answer": "Endocytosis",
       "aliases": [
         "Endocytosis"

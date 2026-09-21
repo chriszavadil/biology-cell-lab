@@ -1,5 +1,7 @@
 # Cell Lab
 
+Current release: **1.0.1**. See [handoff audit](HANDOFF_AUDIT.md) for verified fixes, tests, and limitations.
+
 A static, mobile-first Honors Biology Unit 2 study app.
 
 **Live app:** https://chriszavadil.github.io/biology-cell-lab/

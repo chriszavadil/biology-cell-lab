@@ -7,39 +7,64 @@ const $$ = (s, root=document) => [...root.querySelectorAll(s)];
 const byId = Object.fromEntries(DATA.questions.map(q=>[q.id,q]));
 const topics = Object.fromEntries(DATA.topics.map(t=>[t.id,t]));
 const app = $('#app');
-let storageWarning='', progress=loadProgress(), round=loadRound();
+let storageWarning='', roundWarning='', savedSnapshot=null, progress=loadProgress(), round=loadRound();
 let cardSession=null, explorer={tab:'cells',kind:'animal',selected:'nucleus',labels:true,challenge:false,target:'',feedback:null,found:0};
 let water='hypo', pathway=0, revealGuide=new Set(), toastTimer, offlineReady=false;
 
+// Sync before edits so another tab cannot replace newer saved study work with an old snapshot.
+function syncProgress(){
+ try{const raw=localStorage.getItem(STORAGE_KEY);if(raw===savedSnapshot)return false;
+ const next=raw?cleanProgress(JSON.parse(raw),DATA):emptyProgress();progress=next;savedSnapshot=raw;storageWarning='';return true;
+ }catch{return false;}
+}
+function captureFocus(){
+ const el=document.activeElement;if(!el||el===document.body)return null;
+ if(el.id)return {selector:'#'+CSS.escape(el.id)};
+ if(el.dataset?.org)return {selector:el.tagName.toLowerCase()+'[data-org="'+CSS.escape(el.dataset.org)+'"]'};
+ if(el.dataset?.action){let selector='[data-action="'+CSS.escape(el.dataset.action)+'"]';
+ for(const k of ['value','index','id'])if(el.dataset[k]!==undefined)selector+='[data-'+k+'="'+CSS.escape(el.dataset[k])+'"]';
+ return {selector,action:el.dataset.action};}
+ return null;
+}
+function restoreFocus(f){
+ if(!f)return;let target=$(f.selector);
+ if(!target&&['add-step','remove-step','clear-order'].includes(f.action))target=$('[data-action="add-step"]')||$('#check-answer');
+ if(target&&!target.disabled)target.focus({preventScroll:true});
+}
+
 function loadProgress(){
-  try {const raw=localStorage.getItem(STORAGE_KEY); return raw?cleanProgress(JSON.parse(raw),DATA):emptyProgress();}
+  try {const raw=localStorage.getItem(STORAGE_KEY); savedSnapshot=raw; return raw?cleanProgress(JSON.parse(raw),DATA):emptyProgress();}
   catch {storageWarning='Saved progress could not be read. Your app still works; use a progress backup to restore it.'; return emptyProgress();}
 }
 function save(){
-  try {localStorage.setItem(STORAGE_KEY,JSON.stringify(progress));}
+  try {const raw=JSON.stringify(progress);localStorage.setItem(STORAGE_KEY,raw);savedSnapshot=raw;storageWarning='';$('[data-storage-warning]')?.remove();}
   catch {storageWarning='This browser is not saving progress. Keep this tab open or export a backup.'; toast(storageWarning);}
 }
 function loadRound(){
   try{
     const r=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');
     if(!r||r.schema!==1||!Array.isArray(r.entries)||!r.entries.length||r.entries.length>500) return null;
-    if(!r.entries.every(x=>x&&byId[x.id])) return null;
+    if(!r.entries.every(x=>x&&byId[x.id]&&typeof x.answered==='boolean')||new Set(r.entries.map(x=>x.id)).size!==r.entries.length) return null;
     r.index=Math.max(0,Math.min(r.entries.length-1,Math.floor(r.index)||0));
     r.mode=r.mode==='exam'?'exam':'practice';
     for(const entry of r.entries){
       const q=byId[entry.id];
       if(['multi','order'].includes(q.type)){if(!Array.isArray(entry.response)||!entry.response.every(v=>typeof v==='string'))return null;}
       else if(typeof entry.response!=='string')return null;
+      if(['multi','order'].includes(q.type)){const allowed=q.options||q.answer;if(new Set(entry.response).size!==entry.response.length||entry.response.some(v=>!allowed.includes(v)))return null;}
+      if(q.type==='choice'&&entry.response&&!q.options.includes(entry.response))return null;
       if(entry.answered){entry.correct=grade(q,entry.response);}
       else entry.correct=null;
       entry.options=q.options?(Array.isArray(entry.options)&&entry.options.length===q.options.length&&new Set(entry.options).size===q.options.length&&entry.options.every(x=>q.options.includes(x))?entry.options:shuffle(q.options)):undefined;
       if(q.type==='order' && (!Array.isArray(entry.pool)||entry.pool.length!==q.answer.length||!q.answer.every(x=>entry.pool.includes(x))))entry.pool=shuffle(q.answer);
     }
-    r.done=r.done===true&&r.entries.every(x=>x.answered);
+    r.done=r.done===true&&r.entries.every(x=>x.answered);r.summarySaved=r.summarySaved===true;
+    const first=r.entries.findIndex(x=>!x.answered);
+    if(first>=0){if(r.entries.slice(first).some(x=>x.answered))return null;if(r.index!==first&&!(r.index===first-1&&r.entries[r.index].answered))r.index=first;}
     return r;
   }catch{return null;}
 }
-function saveRound(){try {sessionStorage.setItem(SESSION_KEY,JSON.stringify(round));}catch{/* A round still works in memory when browser storage is unavailable. */}}
+function saveRound(){try {sessionStorage.setItem(SESSION_KEY,JSON.stringify(round));roundWarning='';}catch{roundWarning='This browser cannot save the current round. Keep this tab open until you finish.';}}
 function toast(text){const el=$('#toast');el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),4000);}
 function go(hash){if(location.hash===hash){render();window.scrollTo({top:0,behavior:'instant'});}else location.hash=hash;}
 function route(){const [path,query='']=(location.hash.slice(1)||'home').split('?');return {path,params:new URLSearchParams(query)};}
@@ -61,9 +86,9 @@ function header(active){
  return `<header class="topbar"><div class="topbar-inner"><a class="brand" href="#home" aria-label="Cell Lab home"><span class="brand-mark">${icon('cell')}</span><span>cell<span class="brand-light">lab</span><small>BIOLOGY, MADE CLEAR</small></span></a><nav class="desktop-nav" aria-label="Main navigation">${nav.map(([id,ic,label])=>`<a href="#${id}" ${active===id?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="header-right"><a class="streak-link" href="#progress" aria-label="View progress: ${s.streak} day study streak">${icon('spark')}<span>${s.streak?`${s.streak} day streak`:'Your study space'}</span></a><a class="help-link" href="#help" aria-label="App help and sources">${icon('help')}</a></div></div></header>
  <nav class="mobile-nav" aria-label="Mobile navigation">${[...nav.slice(0,1),['guide','book','Guide'],...nav.slice(2,4),['explore','orbit','Explore']].map(([id,ic,label])=>`<a href="#${id}" ${active===id?'aria-current="page"':''}>${icon(ic)}<span>${label}</span></a>`).join('')}</nav>`;
 }
-function footer(){return `<footer class="footer"><span>${icon('cell')} Little by little, it clicks.</span><div><a href="#progress">Your progress</a><a href="#help">Sources & app info</a><span class="offline-status">${offlineReady?'Ready offline':'Cell Lab v'+DATA.version}</span></div></footer>`;}
+function footer(){return `<footer class="footer"><span>${icon('cell')} Little by little, it clicks.</span><div><a href="#progress">Your progress</a><a href="#help">Sources & app info</a><span class="offline-status">${offlineReady?'Ready offline · v'+DATA.version:'Cell Lab v'+DATA.version}</span></div></footer>`;}
 function render(){
-  stopSpeech(); const r=route();let active=r.path.split('/')[0];let content='';
+  const focusBefore=captureFocus();stopSpeech(); const r=route();let active=r.path.split('/')[0];let content='';
   switch(active){
     case 'home':content=home();break;
     case 'guide':content=guidePage(r.path);break;
@@ -74,9 +99,10 @@ function render(){
     case 'help':content=helpPage();break;
     default:active='home';content=home();
   }
-  app.innerHTML=header(active)+`<main id="main" class="shell" tabindex="-1">${storageWarning?`<div class="notice warn">${e(storageWarning)}</div>`:''}${content}</main>`+footer();
+  app.innerHTML=header(active)+`<main id="main" class="shell" tabindex="-1">${storageWarning||roundWarning?`<div class="notice warn" data-storage-warning>${e(storageWarning||roundWarning)}</div>`:''}${content}</main>`+footer();
   document.title=`${({home:'Your study space',guide:'Study guide',quiz:'Practice',cards:'Flashcards',explore:'Explore cells',progress:'Your progress',help:'Help & sources'})[active]} · Cell Lab`;
   if(active==='quiz'&&round&&!round.done&&r.path!=='quiz/setup') updateCheckButton();
+  restoreFocus(focusBefore);
 }
 function home(){
  const s=stats(progress,DATA),pct=Math.min(100,s.today/10*100),inProgress=round&&!round.done;
@@ -130,10 +156,10 @@ function startQuiz(opts={}){
 function questionPage(){
  const entry=round.entries[round.index],q=byId[entry.id],t=topics[q.topic],show=entry.answered&&round.mode!=='exam',n=round.entries.length;
  const correctSoFar=round.entries.filter(x=>x.answered&&x.correct).length;
- return `<div class="quiz-top"><a href="#home" class="back-link">← Save & exit</a><span class="pill ${round.mode==='exam'?'lavender':'mint'}">${round.mode==='exam'?'TEST YOURSELF':round.review?'SECOND LOOK':'LEARN AS YOU GO'}</span></div><div class="quiz-progress-head"><span>Question <strong>${round.index+1}</strong> of ${n}</span><span>${round.mode==='exam'?'Answers at the end':`${correctSoFar} correct this round`}</span></div><div class="quiz-progress" role="progressbar" aria-label="Round progress" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${round.entries.filter(x=>x.answered).length}"><i style="width:${round.entries.filter(x=>x.answered).length/n*100}%"></i></div>
+ return `<div class="quiz-top"><a href="#home" class="back-link">← Pause & exit</a><span class="pill ${round.mode==='exam'?'lavender':'mint'}">${round.mode==='exam'?'TEST YOURSELF':round.review?'SECOND LOOK':'LEARN AS YOU GO'}</span></div><div class="quiz-progress-head"><span>Question <strong>${round.index+1}</strong> of ${n}</span><span>${round.mode==='exam'?'Answers at the end':`${correctSoFar} correct this round`}</span></div><div class="quiz-progress" role="progressbar" aria-label="Round progress" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${round.entries.filter(x=>x.answered).length}"><i style="width:${round.entries.filter(x=>x.answered).length/n*100}%"></i></div>
  <section class="question-card"><div class="question-meta"><span class="topic-tag ${t.tone}">${icon(t.icon)}${e(t.short)}</span><button class="icon-button" data-action="speak-question" aria-label="Read question aloud">${icon('volume')}</button></div><h1 id="page-title" tabindex="-1">${e(q.prompt)}</h1><p class="question-instruction">${({choice:'Choose one answer.',typed:'Type the biology term, not a full sentence. Case, punctuation, and accepted synonyms do not matter.',multi:'Choose all that apply. A correct answer includes every correct choice and no extras.',order:'Tap the steps below in the correct order. Tap a placed step to remove it.'})[q.type]}</p>
  <form id="answer-form" novalidate>${questionInput(q,entry,show)}<div id="answer-feedback" class="answer-feedback ${show?(entry.correct?'correct':'incorrect'):''}" ${entry.answered?'':'hidden'} tabindex="-1" role="status">${entry.answered?(show?`<strong>${icon(entry.correct?'check':'refresh')}${entry.correct?'You’ve got it.':'Let’s make this one clearer.'}</strong>${!entry.correct?`<p><b>Correct answer:</b> ${e(answerText(q))}</p>`:''}<p>${e(q.why)}</p>${q.guide?`<a href="#guide/${q.guide}">Review study-guide question ${q.guide} ↗</a>`:''}`:`<strong>${icon('check')} Response saved.</strong><p>You’ll see the answer and explanation at the end.</p>`):''}</div>
- <div class="question-actions">${!entry.answered?'<button id="check-answer" type="submit" class="button primary" disabled>'+ (round.mode==='exam'?'Save answer':'Check answer')+' '+icon('arrow')+'</button>':button((round.index===n-1?'See my results':'Next question')+' '+icon('arrow'),'next-question','primary')}</div></form></section><p class="quiz-reassurance">${icon('shield')} Already-graded answers are saved on this device. You can leave and resume this round.</p>`;
+ <div class="question-actions">${!entry.answered?'<button id="check-answer" type="submit" class="button primary" disabled>'+ (round.mode==='exam'?'Save answer':'Check answer')+' '+icon('arrow')+'</button>':button((round.index===n-1?'See my results':'Next question')+' '+icon('arrow'),'next-question','primary')}</div></form></section><p class="quiz-reassurance">${icon('shield')} ${storageWarning||roundWarning?'Keep this tab open: browser storage is unavailable. You can export your progress from Help.':'Already-graded answers are saved on this device. You can leave and resume this round.'}</p>`;
 }
 function questionInput(q,entry,show){
  const disabled=entry.answered?'disabled':'';
@@ -149,6 +175,7 @@ function updateCheckButton(){
  b.disabled=q.type==='order'?r.length!==q.answer.length:q.type==='multi'?r.length===0:!String(r).trim();
 }
 function checkAnswer(){
+ syncProgress();
  if(!round||round.done)return;
  const entry=round.entries[round.index],q=byId[entry.id];
  if(entry.answered||$('#check-answer')?.disabled)return;
@@ -195,7 +222,7 @@ function rateCard(value){
 }
 function explorePage(){
  const tabs=[['cells','orbit','Cell explorer'],['protein','route','Protein journey'],['water','drop','Water lab']];
- return pageHeading('A CLOSER LOOK','Big ideas, little worlds','Explore the structures. Connect their jobs. See the patterns.')+`<div class="lab-tabs" role="tablist" aria-label="Interactive mini-labs">${tabs.map(([id,ic,name])=>`<button role="tab" aria-selected="${explorer.tab===id}" data-action="lab-tab" data-value="${id}">${icon(ic)}${name}</button>`).join('')}</div><section role="tabpanel" aria-label="${e(tabs.find(x=>x[0]===explorer.tab)?.[2]||'Cell explorer')}">${explorer.tab==='protein'?proteinLab():explorer.tab==='water'?waterLab():cellLab()}</section>`;
+ return pageHeading('A CLOSER LOOK','Big ideas, little worlds','Explore the structures. Connect their jobs. See the patterns.')+`<div class="lab-tabs" role="tablist" aria-label="Interactive mini-labs">${tabs.map(([id,ic,name])=>`<button role="tab" id="lab-tab-${id}" aria-controls="lab-panel" tabindex="${explorer.tab===id?'0':'-1'}" aria-selected="${explorer.tab===id}" data-action="lab-tab" data-value="${id}">${icon(ic)}${name}</button>`).join('')}</div><section role="tabpanel" id="lab-panel" aria-labelledby="lab-tab-${explorer.tab}" aria-label="${e(tabs.find(x=>x[0]===explorer.tab)?.[2]||'Cell explorer')}">${explorer.tab==='protein'?proteinLab():explorer.tab==='water'?waterLab():cellLab()}</section>`;
 }
 function cellLab(){
  const x=explorer,available=DATA.organelles.filter(o=>o.cells.includes(x.kind));
@@ -228,7 +255,7 @@ function progressPage(){
  ${progress.rounds.length?`<section class="panel"><h2>Recent rounds</h2><div class="round-list">${progress.rounds.slice(-8).reverse().map(r=>`<div><span>${Number.isNaN(new Date(r.at).getTime())?'Practice round':new Date(r.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})}<small>${r.mode==='exam'?'Test yourself':'Learn as you go'}</small></span><strong>${r.correct} / ${r.total}</strong></div>`).join('')}</div></section>`:''}<div class="notice">${icon('shield')}<span>Progress lives in this browser, on this device. <a href="#help">Export a backup</a> to move it to another device. Flashcard self-ratings do not affect quiz accuracy.</span></div>`;
 }
 function helpPage(){
- return pageHeading('A FEW USEFUL DETAILS','Your lab, your pace','How to use Cell Lab, keep your progress, and check the sources.')+`<div class="help-grid"><section class="panel"><span class="mini-icon mint">${icon('book')}</span><h2>Start here</h2><p>Begin with the seven study-guide prompts, then practice a topic or shuffle a quiz. Use flashcards for recall and the explorer to connect structures with their functions.</p><p><strong>Written answers:</strong> compare your explanation with the model and checklist. The app does not pretend to automatically grade open-ended biology explanations.</p><p><strong>Typed quiz answers:</strong> enter the requested term. Capitalization, punctuation, spacing, and explicitly accepted synonyms are normalized. Incorrect terms are not accepted merely because they contain the right word.</p><p><strong>Review queue:</strong> a missed question stays there until you correctly answer it in a later quiz.</p><p><strong>Read aloud:</strong> uses your browser’s device voice. Availability and offline speech support vary; some voices may use an online speech service.</p></section>
+ return pageHeading('A FEW USEFUL DETAILS','Your lab, your pace','How to use Cell Lab, keep your progress, and check the sources.')+`<div class="help-grid"><section class="panel"><span class="mini-icon mint">${icon('book')}</span><h2>Start here</h2><p>Begin with the seven study-guide prompts, then practice a topic or shuffle a quiz. Use flashcards for recall and the explorer to connect structures with their functions.</p><p><strong>Written answers:</strong> compare your explanation with the model and checklist. The app does not pretend to automatically grade open-ended biology explanations.</p><p><strong>Typed quiz answers:</strong> enter the requested term. Capitalization, punctuation, spacing, and explicitly accepted synonyms are normalized. Standard dotted abbreviations such as A.T.P. and R.E.R. are accepted too. Incorrect terms are not accepted merely because they contain the right word.</p><p><strong>Review queue:</strong> a missed question stays there until you correctly answer it in a later quiz.</p><p><strong>Read aloud:</strong> uses your browser’s device voice. Availability and offline speech support vary; some voices may use an online speech service.</p></section>
  <section class="panel"><span class="mini-icon lavender">${icon('download')}</span><h2>Keep it on your phone</h2><p>On iPhone, open this site in Safari, tap the Share button, then choose <strong>Add to Home Screen</strong>. On supported Android browsers, use <strong>Install app</strong> or <strong>Add to Home screen</strong> in the browser menu.</p><p>The app caches its study content after a successful online visit. Wait for <strong>Ready offline</strong> in the footer before relying on it offline. External reference pages still need internet.</p><p><strong>Updates:</strong> when a new version is ready, an update banner appears. Finish your current answer, then update. Saved progress is kept.</p><div class="notice soft-mint">No account, subscription, or AI API key needed. No computer at home needs to stay on.</div></section>
  <section class="panel"><span class="mini-icon blue">${icon('shield')}</span><h2>Your progress belongs here</h2><p>Your answers, drafts, flashcard ratings, and quiz results are stored locally in this browser. The app has no analytics or server that receives study answers. GitHub serves the public app files.</p><p>Progress does not automatically sync between phones, browsers, or home-screen installs. Clearing website data can erase it, so export a backup to keep it safe.</p><div class="button-row">${button(icon('download')+' Export progress','export-progress','primary')}<label class="button secondary import-button">Import backup<input id="import-progress" type="file" accept="application/json,.json" class="sr-only"></label></div><p class="small-text muted">An import replaces this browser’s progress after confirmation. Treat exported files as personal: they include written study drafts.</p><details class="reset-zone"><summary>Reset this app’s progress</summary><p>This only deletes Cell Lab progress in this browser, not your Spanish app or other websites.</p>${button('Reset Cell Lab progress','reset-progress','danger')}</details></section>
  <section class="panel"><span class="mini-icon rose">${icon('flask')}</span><h2>About the content</h2><p>Cell Lab includes <strong>all seven prompts</strong> from the supplied Honors Biology Unit 2 worksheet, plus <strong>${DATA.questions.length} original practice questions</strong> and <strong>${DATA.flashcards.length} recall cards</strong>. The extra chemistry topic revisits basic biology building blocks.</p><p>The six characteristics use the class reading’s grouping: respond to the environment; grow and develop; produce offspring; maintain homeostasis; have complex chemistry; consist of cells.</p><p>Model answers are study aids, not a teacher-approved answer key. A teacher may accept other valid examples or use different phrasing. Cell diagrams are original simplified schematics, not to scale.</p><p>The worksheet photo, student name, school name, and personal information are not included in the public repository.</p><p class="muted small-text">Cell Lab v${DATA.version} · Content reviewed September 21, 2026</p></section></div>
@@ -236,6 +263,7 @@ function helpPage(){
 }
 // A single delegated event path keeps repeated rendering from stacking listeners.
 document.addEventListener('click',event=>{
+ syncProgress();
  if(event.target.closest('.skip-link')){event.preventDefault();$('#main')?.focus();return;}
  const part=event.target.closest('[data-org]');if(part){event.preventDefault();selectOrganelle(part.dataset.org);return;}
  const el=event.target.closest('[data-action]');if(!el||el.disabled)return;
@@ -259,7 +287,7 @@ document.addEventListener('click',event=>{
   case 'reveal-guide':{const id=Number(el.dataset.id);revealGuide.has(id)?revealGuide.delete(id):revealGuide.add(id);const y=window.scrollY;render();window.scrollTo(0,y);break;}
   case 'confidence':{const id=Number(el.dataset.id),g=DATA.guides.find(g=>g.id===id),s=getGuide(id);if(el.dataset.value==='ready'&&s.checks.length!==g.checklist.length)break;s.confidence=el.dataset.value;save();const y=window.scrollY;render();window.scrollTo(0,y);toast(s.confidence==='ready'?'Confidence saved. Try explaining it again tomorrow.':'Saved. A little more practice will help.');break;}
   case 'speak-guide':speak(DATA.guides.find(g=>g.id===Number(el.dataset.id)).prompt);break;
-  case 'speak-answer':speak(DATA.guides.find(g=>g.id===Number(el.dataset.id)).answer);break;
+  case 'speak-answer':{const g=DATA.guides.find(g=>g.id===Number(el.dataset.id));speak(g.answer+(g.kind==='traits'?'. '+DATA.traits.map(t=>t.name+'. Example: '+t.example).join(' '):''));break;}
   case 'flip-card':if(cardSession&&!cardSession.done){cardSession.flipped=!cardSession.flipped;render();$('.flashcard')?.focus({preventScroll:true});}break;
   case 'rate-card':rateCard(el.dataset.value);break;
   case 'shuffle-cards':startCards(cardSession?.filter||'all');break;
@@ -290,17 +318,22 @@ function selectOrganelle(id){
  else explorer.selected=id;
  const y=window.scrollY;render();window.scrollTo(0,y);
 }
-document.addEventListener('keydown',event=>{const part=event.target.closest('svg [data-org]');if(part&&['Enter',' '].includes(event.key)){event.preventDefault();selectOrganelle(part.dataset.org);}});
+document.addEventListener('keydown',event=>{
+ const tab=event.target.closest('[role=tab]');
+ if(tab&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const ids=['cells','protein','water'];let i=ids.indexOf(explorer.tab);i=event.key==='Home'?0:event.key==='End'?2:(i+(event.key==='ArrowRight'?1:2))%3;explorer.tab=ids[i];render();$('#lab-tab-'+ids[i])?.focus();return;}
+ const part=event.target.closest('svg [data-org]');if(part&&['Enter',' '].includes(event.key)){event.preventDefault();selectOrganelle(part.dataset.org);}});
 document.addEventListener('submit',event=>{if(event.target.id==='answer-form'){event.preventDefault();checkAnswer();}});
 document.addEventListener('input',event=>{
+ syncProgress();
  const el=event.target;
  if(el.id==='guide-draft'){const s=getGuide(Number(el.dataset.guide));s.draft=el.value;save();$('#draft-status').textContent=storageWarning?'Draft kept for this tab only':'Draft saved on this device';}
  if(el.id==='typed-answer'&&round){round.entries[round.index].response=el.value;saveRound();updateCheckButton();}
 });
 document.addEventListener('change',event=>{
+ syncProgress();
  const el=event.target;
  if(el.name==='answer'&&round){const entry=round.entries[round.index];if(entry.answered)return;const q=byId[entry.id];entry.response=q.type==='multi'?$$('input[name="answer"]:checked').map(x=>x.value):el.value;$$('.answer-option').forEach(label=>label.classList.toggle('is-selected',$('input',label).checked));saveRound();updateCheckButton();}
- if(el.dataset.guideCheck){const id=Number(el.dataset.guideCheck),s=getGuide(id);s.checks=$$(`[data-guide-check="${id}"]:checked`).map(x=>Number(x.value));const g=DATA.guides.find(g=>g.id===id);if(s.checks.length<g.checklist.length&&s.confidence==='ready')s.confidence='learning';save();const b=$('[data-action="confidence"][data-value="ready"]');if(b)b.disabled=s.checks.length!==g.checklist.length;}
+ if(el.dataset.guideCheck){const id=Number(el.dataset.guideCheck),s=getGuide(id);s.checks=$$(`[data-guide-check="${id}"]:checked`).map(x=>Number(x.value));const g=DATA.guides.find(g=>g.id===id);if(s.checks.length<g.checklist.length&&s.confidence==='ready')s.confidence='learning';save();const b=$('[data-action="confidence"][data-value="ready"]');if(b)b.disabled=s.checks.length!==g.checklist.length;$$('[data-action=confidence]').forEach(x=>x.classList.toggle('selected',x.dataset.value===s.confidence));}
  if(['quiz-topic','quiz-format','quiz-count'].includes(el.id)){const topic=$('#quiz-topic').value,format=$('#quiz-format').value,n=DATA.questions.filter(q=>(topic==='all'||q.topic===topic)&&(format==='all'||q.type===format)).length;$('#pool-count').textContent=`${n} matching question${n===1?'':'s'} available. Shorter pools use every match.`;$('[data-action="start-quiz"]').disabled=n===0;}
  if(el.id==='card-topic')startCards(el.value);
  if(el.id==='import-progress')importProgress(el.files?.[0]);
@@ -314,6 +347,7 @@ async function importProgress(file){
  catch(error){toast('Import not completed: '+(error instanceof SyntaxError?'The file is not valid JSON.':error.message));}
  finally{if($('#import-progress'))$('#import-progress').value='';}
 }
+window.addEventListener('storage',event=>{if(event.key!==STORAGE_KEY&&event.key!==null)return;if(syncProgress()&&!document.activeElement?.matches('input,textarea,select')){const y=scrollY;render();scrollTo(0,y);}});
 window.addEventListener('hashchange',()=>{render();window.scrollTo({top:0,behavior:'instant'});$('#page-title')?.focus({preventScroll:true});});
 window.addEventListener('pagehide',()=>{stopSpeech();saveRound();});
 render();
@@ -323,6 +357,6 @@ if('serviceWorker'in navigator){
    showUpdate();reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed')showUpdate();});});
    $('#install-update').onclick=()=>{if(reg.waiting){save();saveRound();reg.waiting.postMessage({type:'ACTIVATE_UPDATE'});}};
    let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!refreshing&&!$('#update-banner').hidden){refreshing=true;location.reload();}});
-   navigator.serviceWorker.ready.then(()=>{offlineReady=true;$$('.offline-status').forEach(x=>x.textContent='Ready offline');});
+   navigator.serviceWorker.ready.then(()=>{offlineReady=true;$$('.offline-status').forEach(x=>x.textContent='Ready offline · v'+DATA.version);});
  }).catch(()=>{/* Online app remains fully usable without offline caching. */});
 }

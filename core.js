@@ -3,6 +3,7 @@ export const STORAGE_KEY = 'cell-lab.progress.v1';
 export const SESSION_KEY = 'cell-lab.round.v1';
 export function normalizeAnswer(value) {
   return String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\b(?:[A-Za-z]\.\s*){2,}(?:[A-Za-z](?![A-Za-z]))?/g, s => s.replace(/[.\s]/g, ''))
     .toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
     .replace(/^(the|a|an)\s+/, '');
 }
@@ -46,6 +47,7 @@ export function cleanProgress(raw, data) {
     const s = raw.guides?.[g.id];
     if (object(s)) p.guides[g.id] = {draft: String(s.draft || '').slice(0, 12000), checks: Array.isArray(s.checks) ? [...new Set(s.checks.filter(i => Number.isInteger(i) && i >= 0 && i < g.checklist.length))] : [], confidence: ['ready','learning'].includes(s.confidence) ? s.confidence : ''};
   }
+  for (const g of data.guides) { const s=p.guides[g.id]; if(s?.confidence==='ready' && s.checks.length!==g.checklist.length)s.confidence='learning'; }
   for (const c of data.flashcards) if (['known','review'].includes(raw.cards?.[c.id])) p.cards[c.id] = raw.cards[c.id];
   if (Array.isArray(raw.rounds)) p.rounds = raw.rounds.slice(-50).filter(r => object(r) && typeof r.at === 'string').map(r => ({at:r.at.slice(0,30), total:int(r.total,500), correct:Math.min(int(r.total,500),int(r.correct,500)), mode: r.mode === 'exam' ? 'exam':'practice'}));
   return p;

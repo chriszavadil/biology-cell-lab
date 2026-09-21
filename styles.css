@@ -17,3 +17,19 @@
 @media(max-width:365px){.shell{padding-left:14px;padding-right:14px}.topbar-inner{padding:0 15px}.hero h1{font-size:41px}.hero .button-row{gap:13px}.hero .button.primary{font-size:11px;padding:13px 14px}.hero .text-link{font-size:10px}.hero-meta{font-size:7px;gap:6px}.streak-link span{display:none}.field-row{grid-template-columns:1fr;gap:0}.question-card{padding:21px 17px}.question-card h1{font-size:20px}.answer-option{font-size:12px}.topic-tile h3{font-size:10px}.mobile-nav a{padding:5px 8px;min-width:48px}.lab-tabs button{padding:10px 7px;font-size:9px}.lab-tabs .icon{width:15px}.page-heading h1{font-size:28px}.confidence-row .button{font-size:12px}.guide-list-card{gap:10px}.guide-list-card h2{font-size:16px}.guide-number{font-size:20px;min-width:24px}.hero-art{height:224px;min-height:224px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}html{scroll-behavior:auto}}
 @media print{.topbar,.mobile-nav,.footer,.guide-sidebar,.button,.toast,.update-banner,.back-link,.draft-foot,.guide-navigation{display:none!important}.shell{padding:0;max-width:none}.panel{box-shadow:none;border:1px solid #ddd;break-inside:avoid}.guide-layout{display:block}body{background:white}.page-heading{padding-top:0}.help-grid,.source-list{display:block}.source-list a{color:#000}textarea{min-height:80px}}
+
+/* Handoff audit: readable contrast and touch/keyboard targets without losing the pastel theme. */
+.mobile-nav a:not([aria-current="page"]){color:#596371;}
+.mobile-nav a span{font-size:11px;}
+.model-answer .eyebrow,.simple-explanation .eyebrow{color:#426951;}
+.organelle-info .eyebrow{color:#6c607e;}
+.pitfall strong{color:#7c572e;}
+.stat strong small,.accuracy-tag{color:#53685c;}
+.achievement{opacity:1;}
+.achievement:not(.earned),.achievement:not(.earned) h3,.achievement:not(.earned) p,.achievement:not(.earned) .achievement-state{color:#596273;}
+.lab-tabs button,.organelle-picker button,.order-chip,.order-step{min-height:44px;}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto;}}
+
+.result-score strong span{color:#63766e;}
+
+.result-detail p,.answer-feedback p{overflow-wrap:anywhere;}

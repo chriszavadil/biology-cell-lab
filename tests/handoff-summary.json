@@ -1,0 +1,74 @@
+{
+  "version": "1.0.1",
+  "stage": "pre-deployment",
+  "unit_tests": 28,
+  "browser_assertions": 39,
+  "browser_checks": [
+    "chromium fresh app loads",
+    "chromium all 122 wrong answers rejected; no repeat; reload keeps feedback",
+    "chromium all 122 correct retries accepted, including dotted abbreviations",
+    "chromium retries counted once and cleared missed queue",
+    "chromium exam hides correctness until results, then gives exact 5/10",
+    "chromium all seven prompts, answers, draft reloads, escaping, and confidence gates",
+    "chromium 47-card full pass and self-ratings leave quiz scores unchanged",
+    "chromium cancelling reset preserves work",
+    "chromium malformed, wrong-version, and oversized imports preserve progress",
+    "chromium confirmed reset clears only this app state",
+    "chromium backup restores exact drafts, scores, and card ratings",
+    "chromium separate open tabs preserve both drafts and quiz totals",
+    "chromium all 40 topic/style combinations handled including empty pools",
+    "chromium ordering retains usable keyboard focus",
+    "chromium mini-labs support arrow keys and focus",
+    "chromium all cell structures, five protein steps, three water states, and challenge feedback",
+    "chromium portrait, small phone, landscape, desktop layouts have no horizontal overflow",
+    "chromium no unhandled JavaScript errors",
+    "chromium no external requests or study-data uploads",
+    "webkit fresh app loads",
+    "webkit all 122 wrong answers rejected; no repeat; reload keeps feedback",
+    "webkit all 122 correct retries accepted, including dotted abbreviations",
+    "webkit retries counted once and cleared missed queue",
+    "webkit exam hides correctness until results, then gives exact 5/10",
+    "webkit all seven prompts, answers, draft reloads, escaping, and confidence gates",
+    "webkit 47-card full pass and self-ratings leave quiz scores unchanged",
+    "webkit cancelling reset preserves work",
+    "webkit malformed, wrong-version, and oversized imports preserve progress",
+    "webkit confirmed reset clears only this app state",
+    "webkit backup restores exact drafts, scores, and card ratings",
+    "webkit separate open tabs preserve both drafts and quiz totals",
+    "webkit all 40 topic/style combinations handled including empty pools",
+    "webkit ordering retains usable keyboard focus",
+    "webkit mini-labs support arrow keys and focus",
+    "webkit all cell structures, five protein steps, three water states, and challenge feedback",
+    "webkit portrait, small phone, landscape, desktop layouts have no horizontal overflow",
+    "webkit no unhandled JavaScript errors",
+    "webkit no external requests or study-data uploads"
+  ],
+  "axe_states": 29,
+  "axe_violations": 0,
+  "defensive_checks": [
+    "chromium: denied persistent/session storage keeps study app usable, warns accurately, and exports in-memory work",
+    "chromium: malformed saved progress and invalid quiz recover without a crash; successful saving clears warning",
+    "webkit: denied persistent/session storage keeps study app usable, warns accurately, and exports in-memory work",
+    "webkit: malformed saved progress and invalid quiz recover without a crash; successful saving clears warning"
+  ],
+  "upgrade_offline": [
+    "chromium: cached 1.0.0 -> explicit update -> 1.0.1; draft and unfinished answer preserved; unrelated app keys/caches untouched; actual origin-shutdown offline quiz passes",
+    "webkit: cached 1.0.0 -> explicit update -> 1.0.1; draft and unfinished answer preserved; unrelated app keys/caches untouched; actual origin-shutdown offline quiz passes"
+  ],
+  "edge_cases": [
+    {
+      "engine": "chromium",
+      "maximum_draft_reload": true,
+      "q1_speech_includes_six_examples": true,
+      "duplicate_submit_counted_once": true,
+      "long_answer_no_overflow": true
+    },
+    {
+      "engine": "webkit",
+      "maximum_draft_reload": true,
+      "q1_speech_includes_six_examples": true,
+      "duplicate_submit_counted_once": true,
+      "long_answer_no_overflow": true
+    }
+  ]
+}

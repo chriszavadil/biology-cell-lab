@@ -85,3 +85,26 @@ test('all guide prompts include self-checklists, pitfalls, and plain-language ex
 test('curriculum follows class six-trait grouping and correct root/protein/water distinctions',()=>{
  assert(DATA.traits.some(t=>t.name==='Have complex chemistry'));assert.equal(DATA.traits.length,6);assert(DATA.guides[3].answer.includes('Ribosomes on the rough ER'));assert(DATA.guides[4].answer.includes('normally lacks chloroplasts'));assert(DATA.guides[6].answer.includes('turgid'));
 });
+
+test('handoff: dotted abbreviations are correct without accepting contradictions',()=>{
+ for(const [id,forms] of [['q088',['A.T.P.','A. T. P.']],['q064',['Rough E.R.','R.E.R.','R. E. R.']],['q076',['m.R.N.A.','m. R. N. A.']]]){
+  const q=DATA.questions.find(q=>q.id===id);for(const s of forms){assert(grade(q,s),s);assert(!grade(q,'not '+s),s);assert(!grade(q,s+' or DNA'),s);}
+ }
+ assert.equal(grade(DATA.questions.find(q=>q.id==='q106'),'turgor pressure'),false);
+});
+test('handoff: every subset of every select-all question has exactly one passing set',()=>{
+ for(const q of DATA.questions.filter(q=>q.type==='multi')){
+  let passing=0;for(let mask=0;mask<(1<<q.options.length);mask++){
+   const selected=q.options.filter((_,i)=>mask&(1<<i));const expected=selected.length===q.answer.length&&q.answer.every(x=>selected.includes(x));
+   assert.equal(grade(q,selected),expected,q.id+':'+mask);if(expected)passing++;
+  }assert.equal(passing,1,q.id);
+ }
+});
+test('handoff: all 40,488 ordering permutations have only one passing order per question',()=>{
+ function* perms(a){if(!a.length){yield [];return;}for(let i=0;i<a.length;i++)for(const tail of perms(a.filter((_,j)=>j!==i)))yield [a[i],...tail];}
+ for(const q of DATA.questions.filter(q=>q.type==='order')){let passing=0;for(const a of perms(q.answer)){const expected=a.every((x,i)=>x===q.answer[i]);assert.equal(grade(q,a),expected,q.id);if(expected)passing++;}assert.equal(passing,1);}
+});
+test('handoff: imported confidence must satisfy the same checklist as the UI',()=>{
+ const p=emptyProgress();p.guides[1]={draft:'test',confidence:'ready',checks:[0]};assert.equal(cleanProgress(p,DATA).guides[1].confidence,'learning');
+ p.guides[1].checks=[0,1,2,3];assert.equal(cleanProgress(p,DATA).guides[1].confidence,'ready');
+});

@@ -1,7 +1,7 @@
 /* This service worker is scoped only to this app, never to other GitHub Pages apps. */
-const VERSION='cell-lab-v1.0.0';
+const VERSION='cell-lab-v1.0.1';
 const FILES=['./','./index.html','./styles.css','./app.js','./core.js','./data.js','./visuals.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
-self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(FILES))));
+self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(FILES.map(file=>new Request(new URL(file,self.registration.scope),{cache:'reload'}))))));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
   const keys=await caches.keys();
   await Promise.all(keys.filter(key=>key.startsWith('cell-lab-v')&&key!==VERSION).map(key=>caches.delete(key)));
